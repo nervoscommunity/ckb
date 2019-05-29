@@ -286,7 +286,7 @@ mod tests {
             let miner_config = app_config.into_miner().unwrap_or_else(|err| panic!(err));
             assert_eq!(miner_config.logger.filter, Some("info".to_string()));
             assert_eq!(miner_config.chain.spec, PathBuf::from("specs/dev.toml"));
-            assert_eq!(miner_config.miner.rpc_url, "http://127.0.0.1:7000/");
+            assert_eq!(miner_config.miner.client.rpc_url, "http://127.0.0.1:7000/");
         }
     }
 
@@ -353,7 +353,7 @@ mod tests {
             let miner_config = app_config.into_miner().unwrap_or_else(|err| panic!(err));
             assert_eq!(miner_config.logger.filter, Some("info".to_string()));
             assert_eq!(miner_config.chain.spec, PathBuf::from("specs/testnet.toml"));
-            assert_eq!(miner_config.miner.rpc_url, "http://127.0.0.1:7000/");
+            assert_eq!(miner_config.miner.client.rpc_url, "http://127.0.0.1:7000/");
         }
     }
 
@@ -392,7 +392,7 @@ mod tests {
                 miner_config.chain.spec,
                 PathBuf::from("specs/integration.toml")
             );
-            assert_eq!(miner_config.miner.rpc_url, "http://127.0.0.1:7000/");
+            assert_eq!(miner_config.miner.client.rpc_url, "http://127.0.0.1:7000/");
         }
     }
 }
