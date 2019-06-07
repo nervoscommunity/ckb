@@ -1,5 +1,4 @@
 use crate::client::Client;
-use crate::config::WorkerConfig;
 use crate::worker::{start_worker, WorkerController, WorkerMessage};
 use crate::Work;
 use ckb_core::block::BlockBuilder;
@@ -11,6 +10,7 @@ use crossbeam_channel::{select, unbounded, Receiver};
 use lru_cache::LruCache;
 use numext_fixed_hash::H256;
 use std::sync::Arc;
+use toml::Value;
 
 const WORK_CACHE_SIZE: usize = 32;
 
@@ -28,11 +28,11 @@ impl Miner {
         pow: Arc<dyn PowEngine>,
         client: Client,
         work_rx: Receiver<Work>,
-        workers: &[WorkerConfig],
+        configs: &[Value],
     ) -> Miner {
         let (seal_tx, seal_rx) = unbounded();
 
-        let worker_controllers = workers
+        let worker_controllers = configs
             .iter()
             .map(|config| start_worker(Arc::clone(&pow), config, seal_tx.clone()))
             .collect();

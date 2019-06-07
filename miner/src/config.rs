@@ -3,11 +3,12 @@ use numext_fixed_hash::H256;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
+use toml::Value;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MinerConfig {
     pub client: ClientConfig,
-    pub workers: Vec<WorkerConfig>,
+    pub workers: Vec<Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -18,25 +19,29 @@ pub struct ClientConfig {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WorkerConfig {
-    pub worker_type: WorkerType,
-    #[serde(flatten)]
-    pub parameters: Option<HashMap<String, String>>,
+#[serde(tag = "mode", rename_all = "snake_case")]
+pub enum CuckooParams {
+    Simple(CuckooSimple),
+    Lean(CuckooLean),
 }
 
-impl WorkerConfig {
-    pub fn get_value<T: FromStr>(&self, name: &str, default_value: T) -> T {
-        self.parameters
-            .as_ref()
-            .and_then(|params| params.get(name).and_then(|value| value.parse::<T>().ok()))
-            .unwrap_or_else(|| default_value)
-    }
+#[derive(Deserialize, Serialize, Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[serde(tag = "mode", rename_all = "snake_case")]
+pub enum Distribution {
+    Constant { value: u64 },
+    Uniform { low: u64, high: u64 },
+    Normal { mean: u64, std_dev: u64 },
+    Poisson { lambda: u64 },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum WorkerType {
-    Dummy,
-    CuckooSimple,
+pub struct CuckooSimple {
+    pub threads: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CuckooLean {
+    pub device_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
