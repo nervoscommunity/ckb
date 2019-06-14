@@ -1,4 +1,5 @@
 use ckb_core::block::Block;
+use ckb_core::cell::BlockInfo;
 use ckb_core::transaction::{CellOutPoint, OutPoint};
 use ckb_core::transaction_meta::TransactionMeta;
 use ckb_util::{FnvHashMap, FnvHashSet};
@@ -90,12 +91,11 @@ impl CellSet {
         for (hash, (number, epoch, cellbase, len)) in diff.new_outputs.clone() {
             removed.remove(&hash);
             if cellbase {
-                new.insert(
-                    hash,
-                    TransactionMeta::new_cellbase(number, epoch, len, false),
-                );
+                let block_info = BlockInfo::new(number, epoch);
+                new.insert(hash, TransactionMeta::new_cellbase(block_info, len, false));
             } else {
-                new.insert(hash, TransactionMeta::new(number, epoch, len, false));
+                let block_info = BlockInfo::new(number, epoch);
+                new.insert(hash, TransactionMeta::new(block_info, len, false));
             }
         }
 
@@ -144,10 +144,11 @@ impl CellSet {
         cellbase: bool,
         outputs_len: usize,
     ) -> TransactionMeta {
+        let block_info = BlockInfo::new(number, epoch);
         let mut meta = if cellbase {
-            TransactionMeta::new_cellbase(number, epoch, outputs_len, true)
+            TransactionMeta::new_cellbase(block_info, outputs_len, true)
         } else {
-            TransactionMeta::new(number, epoch, outputs_len, true)
+            TransactionMeta::new(block_info, outputs_len, true)
         };
         meta.unset_dead(cell.index as usize);
         self.inner.insert(cell.tx_hash.clone(), meta.clone());
@@ -162,10 +163,11 @@ impl CellSet {
         cellbase: bool,
         outputs_len: usize,
     ) -> TransactionMeta {
+        let block_info = BlockInfo::new(number, epoch);
         let meta = if cellbase {
-            TransactionMeta::new_cellbase(number, epoch, outputs_len, false)
+            TransactionMeta::new_cellbase(block_info, outputs_len, false)
         } else {
-            TransactionMeta::new(number, epoch, outputs_len, false)
+            TransactionMeta::new(block_info, outputs_len, false)
         };
         self.inner.insert(tx_hash, meta.clone());
         meta

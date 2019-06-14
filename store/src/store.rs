@@ -285,21 +285,12 @@ impl<T: KeyValueDB> ChainStore for ChainKVStore<T> {
 
         for tx in genesis.transactions() {
             let tx_meta;
+            let block_info = BlockInfo::new(genesis.header().number(), genesis.header().epoch());
             let ins = if tx.is_cellbase() {
-                tx_meta = TransactionMeta::new_cellbase(
-                    genesis.header().number(),
-                    genesis.header().epoch(),
-                    tx.outputs().len(),
-                    false,
-                );
+                tx_meta = TransactionMeta::new_cellbase(block_info, tx.outputs().len(), false);
                 Vec::new()
             } else {
-                tx_meta = TransactionMeta::new(
-                    genesis.header().number(),
-                    genesis.header().epoch(),
-                    tx.outputs().len(),
-                    false,
-                );
+                tx_meta = TransactionMeta::new(block_info, tx.outputs().len(), false);
                 tx.input_pts_iter().cloned().collect()
             };
             batch.update_cell_set(tx.hash(), &tx_meta)?;

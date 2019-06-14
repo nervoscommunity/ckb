@@ -1,3 +1,4 @@
+use crate::cell::BlockInfo;
 use bit_vec::BitVec;
 use serde_derive::{Deserialize, Serialize};
 
@@ -20,8 +21,7 @@ impl From<BitVecSerde> for BitVec {
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct TransactionMeta {
-    block_number: u64,
-    epoch_number: u64,
+    block_info: BlockInfo,
     cellbase: bool,
     /// each bits indicate if transaction has dead cells
     #[serde(with = "BitVecSerde")]
@@ -29,28 +29,17 @@ pub struct TransactionMeta {
 }
 
 impl TransactionMeta {
-    pub fn new(
-        block_number: u64,
-        epoch_number: u64,
-        outputs_count: usize,
-        all_dead: bool,
-    ) -> TransactionMeta {
+    pub fn new(block_info: BlockInfo, outputs_count: usize, all_dead: bool) -> TransactionMeta {
         TransactionMeta {
-            block_number,
-            epoch_number,
+            block_info,
             cellbase: false,
             dead_cell: BitVec::from_elem(outputs_count, all_dead),
         }
     }
 
     /// New cellbase transaction
-    pub fn new_cellbase(
-        block_number: u64,
-        epoch_number: u64,
-        outputs_count: usize,
-        all_dead: bool,
-    ) -> Self {
-        let mut result = Self::new(block_number, epoch_number, outputs_count, all_dead);
+    pub fn new_cellbase(block_info: BlockInfo, outputs_count: usize, all_dead: bool) -> Self {
+        let mut result = Self::new(block_info, outputs_count, all_dead);
         result.cellbase = true;
         result
     }
@@ -66,11 +55,11 @@ impl TransactionMeta {
     }
 
     pub fn block_number(&self) -> u64 {
-        self.block_number
+        self.block_info.number
     }
 
     pub fn epoch_number(&self) -> u64 {
-        self.epoch_number
+        self.block_info.epoch
     }
 
     pub fn is_empty(&self) -> bool {
@@ -105,7 +94,7 @@ mod tests {
 
     #[test]
     fn transaction_meta_serde() {
-        let mut original = TransactionMeta::new(0, 0, 4, false);
+        let mut original = TransactionMeta::new(BlockInfo::new(0, 0), 4, false);
         original.set_dead(1);
         original.set_dead(3);
 
@@ -121,7 +110,7 @@ mod tests {
 
     #[test]
     fn set_unset_dead_out_of_bounds() {
-        let mut meta = TransactionMeta::new(0, 0, 4, false);
+        let mut meta = TransactionMeta::new(BlockInfo::new(0, 0), 4, false);
         meta.set_dead(3);
         assert!(meta.is_dead(3) == Some(true));
         meta.unset_dead(3);
