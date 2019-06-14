@@ -540,10 +540,10 @@ impl<B: DbBatch> StoreBatch for DefaultStoreBatch<B> {
                 let cell_meta = CellMeta {
                     cell_output: None,
                     out_point,
-                    block_info: Some(BlockInfo {
-                        number: block.header().number(),
-                        epoch: block.header().epoch(),
-                    }),
+                    block_info: Some(BlockInfo::new(
+                        block.header().number(),
+                        block.header().epoch(),
+                    )),
                     cellbase,
                     capacity: output.capacity,
                     data_hash: Some(output.data_hash()),

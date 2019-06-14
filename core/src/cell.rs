@@ -399,10 +399,10 @@ impl<'a> CellProvider for BlockCellProvider<'a> {
                             out_point: out_point.to_owned(),
                             data_hash: None,
                             capacity: output.capacity,
-                            block_info: Some(BlockInfo {
-                                number: self.block.header().number(),
-                                epoch: self.block.header().epoch(),
-                            }),
+                            block_info: Some(BlockInfo::new(
+                                self.block.header().number(),
+                                self.block.header().epoch(),
+                            )),
                             cellbase: *i == 0,
                         })
                     })
@@ -718,10 +718,7 @@ mod tests {
             type_: None,
         };
         CellMeta {
-            block_info: Some(BlockInfo {
-                number: 1,
-                epoch: 1,
-            }),
+            block_info: Some(BlockInfo::new(1, 1)),
             capacity: cell_output.capacity,
             data_hash: Some(cell_output.data_hash()),
             cell_output: Some(cell_output),
