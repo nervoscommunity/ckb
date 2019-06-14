@@ -2,13 +2,13 @@ use crate::error::{CellbaseError, CommitError, Error};
 use crate::uncles_verifier::{UncleProvider, UnclesVerifier};
 use crate::{ContextualTransactionVerifier, TransactionVerifier};
 use ckb_chain_spec::consensus::Consensus;
-use ckb_core::cell::ResolvedTransaction;
+use ckb_core::cell::{BlockInfo, ResolvedTransaction};
 use ckb_core::extras::EpochExt;
 use ckb_core::header::Header;
 use ckb_core::transaction::Transaction;
 use ckb_core::uncle::UncleBlock;
 use ckb_core::Cycle;
-use ckb_core::{block::Block, BlockNumber, Capacity, EpochNumber};
+use ckb_core::{block::Block, BlockNumber, Capacity};
 use ckb_logger::error_target;
 use ckb_store::{data_loader_wrapper::DataLoaderWrapper, ChainStore};
 use ckb_traits::{BlockMedianTimeContext, ChainProvider};
@@ -278,8 +278,7 @@ where
 
 struct BlockTxsVerifier<'a, P> {
     context: &'a ForkContext<'a, P>,
-    block_number: BlockNumber,
-    epoch_number: EpochNumber,
+    block_info: &'a BlockInfo,
     resolved: &'a [ResolvedTransaction<'a>],
 }
 
@@ -290,14 +289,12 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         context: &'a ForkContext<'a, P>,
-        block_number: BlockNumber,
-        epoch_number: EpochNumber,
+        block_info: &'a BlockInfo,
         resolved: &'a [ResolvedTransaction<'a>],
     ) -> BlockTxsVerifier<'a, P> {
         BlockTxsVerifier {
             context,
-            block_number,
-            epoch_number,
+            block_info,
             resolved,
         }
     }
@@ -314,8 +311,7 @@ where
                     ContextualTransactionVerifier::new(
                         &tx,
                         self.context,
-                        self.block_number,
-                        self.epoch_number,
+                        self.block_info,
                         self.context.provider.consensus(),
                     )
                     .verify()
@@ -325,8 +321,7 @@ where
                     TransactionVerifier::new(
                         &tx,
                         self.context,
-                        self.block_number,
-                        self.epoch_number,
+                        self.block_info,
                         self.context.provider.consensus(),
                         self.context.provider.script_config(),
                         self.context.provider.store(),
@@ -403,13 +398,13 @@ where
         CommitVerifier::new(&self.context.provider, block).verify()?;
         let txs_fees = RewardVerifier::new(&self.context.provider, resolved, &parent).verify()?;
 
-        let cycles = BlockTxsVerifier::new(
-            self.context,
+        let block_info = BlockInfo::new(
             block.header().number(),
             block.header().epoch(),
-            resolved,
-        )
-        .verify(txs_verify_cache)?;
+            block.header().parent_hash().clone(),
+        );
+        let cycles =
+            BlockTxsVerifier::new(self.context, &block_info, resolved).verify(txs_verify_cache)?;
 
         Ok((cycles, txs_fees))
     }

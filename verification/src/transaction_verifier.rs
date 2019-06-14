@@ -1,5 +1,6 @@
 use crate::error::TransactionError;
 use ckb_chain_spec::consensus::Consensus;
+use ckb_core::cell::BlockInfo;
 use ckb_core::transaction::{Capacity, Transaction, TX_VERSION};
 use ckb_core::{
     cell::{CellMeta, ResolvedOutPoint, ResolvedTransaction},
@@ -25,13 +26,12 @@ where
     pub fn new(
         rtx: &'a ResolvedTransaction,
         median_time_context: &'a M,
-        block_number: BlockNumber,
-        epoch_number: EpochNumber,
+        block_info: &'a BlockInfo,
         consensus: &'a Consensus,
     ) -> Self {
         ContextualTransactionVerifier {
-            maturity: MaturityVerifier::new(&rtx, block_number, consensus.cellbase_maturity()),
-            since: SinceVerifier::new(rtx, median_time_context, block_number, epoch_number),
+            maturity: MaturityVerifier::new(&rtx, block_info.number, consensus.cellbase_maturity()),
+            since: SinceVerifier::new(rtx, median_time_context, block_info),
         }
     }
 
@@ -61,8 +61,7 @@ where
     pub fn new(
         rtx: &'a ResolvedTransaction,
         median_time_context: &'a M,
-        block_number: BlockNumber,
-        epoch_number: EpochNumber,
+        block_info: &'a BlockInfo,
         consensus: &'a Consensus,
         script_config: &'a ScriptConfig,
         chain_store: &'a Arc<CS>,
@@ -71,11 +70,11 @@ where
             version: VersionVerifier::new(&rtx.transaction),
             size: SizeVerifier::new(&rtx.transaction, consensus.max_block_bytes()),
             empty: EmptyVerifier::new(&rtx.transaction),
-            maturity: MaturityVerifier::new(&rtx, block_number, consensus.cellbase_maturity()),
+            maturity: MaturityVerifier::new(&rtx, block_info.number, consensus.cellbase_maturity()),
             duplicate_deps: DuplicateDepsVerifier::new(&rtx.transaction),
             script: ScriptVerifier::new(rtx, chain_store, script_config),
             capacity: CapacityVerifier::new(rtx),
-            since: SinceVerifier::new(rtx, median_time_context, block_number, epoch_number),
+            since: SinceVerifier::new(rtx, median_time_context, block_info),
         }
     }
 
@@ -361,8 +360,7 @@ impl Since {
 pub struct SinceVerifier<'a, M> {
     rtx: &'a ResolvedTransaction<'a>,
     block_median_time_context: &'a M,
-    block_number: BlockNumber,
-    epoch_number: EpochNumber,
+    block_info: &'a BlockInfo,
     median_timestamps_cache: RefCell<LruCache<BlockNumber, u64>>,
 }
 
@@ -373,17 +371,23 @@ where
     pub fn new(
         rtx: &'a ResolvedTransaction,
         block_median_time_context: &'a M,
-        block_number: BlockNumber,
-        epoch_number: BlockNumber,
+        block_info: &'a BlockInfo,
     ) -> Self {
         let median_timestamps_cache = RefCell::new(LruCache::new(rtx.resolved_inputs.len()));
         SinceVerifier {
             rtx,
             block_median_time_context,
-            block_number,
-            epoch_number,
+            block_info,
             median_timestamps_cache,
         }
+    }
+
+    fn block_number(&self) -> BlockNumber {
+        self.block_info.number
+    }
+
+    fn epoch_number(&self) -> EpochNumber {
+        self.block_info.epoch
     }
 
     fn block_median_time(&self, n: BlockNumber) -> u64 {
@@ -417,17 +421,18 @@ where
         if since.is_absolute() {
             match since.extract_metric() {
                 Some(SinceMetric::BlockNumber(block_number)) => {
-                    if self.block_number < block_number {
+                    if self.block_number() < block_number {
                         return Err(TransactionError::Immature);
                     }
                 }
                 Some(SinceMetric::EpochNumber(epoch_number)) => {
-                    if self.epoch_number < epoch_number {
+                    if self.epoch_number() < epoch_number {
                         return Err(TransactionError::Immature);
                     }
                 }
                 Some(SinceMetric::Timestamp(timestamp)) => {
-                    let tip_timestamp = self.block_median_time(self.block_number.saturating_sub(1));
+                    let tip_timestamp =
+                        self.block_median_time(self.block_number().saturating_sub(1));
                     if tip_timestamp < timestamp {
                         return Err(TransactionError::Immature);
                     }
@@ -453,12 +458,12 @@ where
             };
             match since.extract_metric() {
                 Some(SinceMetric::BlockNumber(block_number)) => {
-                    if self.block_number < cell_block_number + block_number {
+                    if self.block_number() < cell_block_number + block_number {
                         return Err(TransactionError::Immature);
                     }
                 }
                 Some(SinceMetric::EpochNumber(epoch_number)) => {
-                    if self.epoch_number < cell_epoch_number + epoch_number {
+                    if self.epoch_number() < cell_epoch_number + epoch_number {
                         return Err(TransactionError::Immature);
                     }
                 }
@@ -470,7 +475,7 @@ where
                     let cell_median_timestamp =
                         self.block_median_time(cell_block_number.saturating_sub(1));
                     let current_median_time =
-                        self.block_median_time(self.block_number.saturating_sub(1));
+                        self.block_median_time(self.block_number().saturating_sub(1));
                     if current_median_time < cell_median_timestamp + timestamp {
                         return Err(TransactionError::Immature);
                     }

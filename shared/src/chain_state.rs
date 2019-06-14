@@ -6,8 +6,8 @@ use crate::tx_proposal_table::TxProposalTable;
 use ckb_chain_spec::consensus::{Consensus, ProposalWindow};
 use ckb_core::block::Block;
 use ckb_core::cell::{
-    resolve_transaction, CellMetaBuilder, CellProvider, CellStatus, HeaderProvider, HeaderStatus,
-    OverlayCellProvider, ResolvedTransaction, UnresolvableError,
+    resolve_transaction, BlockInfo, CellMetaBuilder, CellProvider, CellStatus, HeaderProvider,
+    HeaderStatus, OverlayCellProvider, ResolvedTransaction, UnresolvableError,
 };
 use ckb_core::extras::EpochExt;
 use ckb_core::header::{BlockNumber, Header};
@@ -403,17 +403,16 @@ impl<CS: ChainStore> ChainState<CS> {
         rtx: &ResolvedTransaction,
         cycles: Option<Cycle>,
     ) -> Result<Cycle, PoolError> {
+        let block_info = BlockInfo::new(
+            self.tx_verify_block_number(),
+            self.current_epoch_ext().number(),
+            self.tip_header.parent_hash().clone(),
+        );
         match cycles {
             Some(cycles) => {
-                ContextualTransactionVerifier::new(
-                    &rtx,
-                    &self,
-                    self.tx_verify_block_number(),
-                    self.current_epoch_ext().number(),
-                    &self.consensus(),
-                )
-                .verify()
-                .map_err(PoolError::InvalidTx)?;
+                ContextualTransactionVerifier::new(&rtx, &self, &block_info, &self.consensus())
+                    .verify()
+                    .map_err(PoolError::InvalidTx)?;
                 Ok(cycles)
             }
             None => {
@@ -421,8 +420,7 @@ impl<CS: ChainStore> ChainState<CS> {
                 let cycles = TransactionVerifier::new(
                     &rtx,
                     &self,
-                    self.tx_verify_block_number(),
-                    self.current_epoch_ext().number(),
+                    &block_info,
                     &self.consensus(),
                     &self.script_config,
                     &self.store,

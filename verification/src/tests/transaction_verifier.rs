@@ -228,7 +228,8 @@ pub fn test_since() {
     let median_time_context = FakeMedianTime {
         timestamps: vec![0; 11],
     };
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 5, 1);
+    let block_info = BlockInfo::new(5, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(
         verifier.verify().err(),
         Some(TransactionError::InvalidSince)
@@ -260,10 +261,12 @@ pub fn test_since() {
     let median_time_context = FakeMedianTime {
         timestamps: vec![0; 11],
     };
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 5, 1);
+    let block_info = BlockInfo::new(5, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 10 height
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 10, 1);
+    let block_info = BlockInfo::new(10, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
     // relative lock
@@ -289,14 +292,16 @@ pub fn test_since() {
         )],
     };
 
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 1);
+    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 1024 seconds
     // fake median time: 1124
     let median_time_context = FakeMedianTime {
         timestamps: vec![0, 100_000, 1_124_000, 2_000_000, 3_000_000],
     };
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 1);
+    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
     // both
@@ -322,7 +327,8 @@ pub fn test_since() {
         )],
     };
 
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 1);
+    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 1024 seconds and 10 blocks
     // fake median time: 1124
@@ -332,7 +338,8 @@ pub fn test_since() {
             6_000_000,
         ],
     };
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 10, 1);
+    let block_info = BlockInfo::new(10, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
     // next epoch
     let transaction = TransactionBuilder::default()
@@ -357,9 +364,11 @@ pub fn test_since() {
         )],
     };
 
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 1);
+    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 2);
+    let block_info = BlockInfo::new(4, 2, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
     // invalid since flags
@@ -385,7 +394,8 @@ pub fn test_since() {
         )],
     };
 
-    let verifier = SinceVerifier::new(&rtx, &median_time_context, 4, 2);
+    let block_info = BlockInfo::new(4, 2, H256::zero());
+    let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(
         verifier.verify().err(),
         Some(TransactionError::InvalidSince)
