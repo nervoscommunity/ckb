@@ -11,7 +11,7 @@ pub struct CellSetDiff {
     pub old_inputs: FnvHashSet<OutPoint>,
     pub old_outputs: FnvHashSet<H256>,
     pub new_inputs: FnvHashSet<OutPoint>,
-    pub new_outputs: FnvHashMap<H256, (u64, u64, bool, usize)>,
+    pub new_outputs: FnvHashMap<H256, (BlockInfo, bool, usize)>,
 }
 
 impl CellSetDiff {
@@ -20,15 +20,15 @@ impl CellSetDiff {
             let input_iter = tx.input_pts_iter();
             let tx_hash = tx.hash();
             let output_len = tx.outputs().len();
+            let block_info = BlockInfo::new(
+                block.header().number(),
+                block.header().epoch(),
+                block.header().parent_hash().clone(),
+            );
             self.new_inputs.extend(input_iter.cloned());
             self.new_outputs.insert(
                 tx_hash.to_owned(),
-                (
-                    block.header().number(),
-                    block.header().epoch(),
-                    tx.is_cellbase(),
-                    output_len,
-                ),
+                (block_info, tx.is_cellbase(), output_len),
             );
         }
     }
@@ -88,13 +88,11 @@ impl CellSet {
             }
         }
 
-        for (hash, (number, epoch, cellbase, len)) in diff.new_outputs.clone() {
+        for (hash, (block_info, cellbase, len)) in diff.new_outputs.clone() {
             removed.remove(&hash);
             if cellbase {
-                let block_info = BlockInfo::new(number, epoch);
                 new.insert(hash, TransactionMeta::new_cellbase(block_info, len, false));
             } else {
-                let block_info = BlockInfo::new(number, epoch);
                 new.insert(hash, TransactionMeta::new(block_info, len, false));
             }
         }
@@ -141,10 +139,11 @@ impl CellSet {
         cell: &CellOutPoint,
         number: u64,
         epoch: u64,
+        parent: H256,
         cellbase: bool,
         outputs_len: usize,
     ) -> TransactionMeta {
-        let block_info = BlockInfo::new(number, epoch);
+        let block_info = BlockInfo::new(number, epoch, parent);
         let mut meta = if cellbase {
             TransactionMeta::new_cellbase(block_info, outputs_len, true)
         } else {
@@ -158,12 +157,10 @@ impl CellSet {
     pub(crate) fn insert_transaction(
         &mut self,
         tx_hash: H256,
-        number: u64,
-        epoch: u64,
+        block_info: BlockInfo,
         cellbase: bool,
         outputs_len: usize,
     ) -> TransactionMeta {
-        let block_info = BlockInfo::new(number, epoch);
         let meta = if cellbase {
             TransactionMeta::new_cellbase(block_info, outputs_len, false)
         } else {

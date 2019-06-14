@@ -98,6 +98,18 @@ fn test_transaction_spend_in_same_block() {
     chain.gen_empty_block(100);
     // commit txs in block
     chain.gen_block_with_commit_txs(txs.clone());
+    let (parent_hash4, parent_number4) = {
+        chain
+            .blocks()
+            .last()
+            .map(|block| {
+                (
+                    block.header().parent_hash().clone(),
+                    block.header().number(),
+                )
+            })
+            .unwrap()
+    };
 
     for block in chain.blocks() {
         chain_controller
@@ -126,7 +138,7 @@ fn test_transaction_spend_in_same_block() {
                 })
                 .data_hash(tx2_output.data_hash())
                 .capacity(tx2_output.capacity)
-                .block_info(BlockInfo::new(4, 0))
+                .block_info(BlockInfo::new(parent_number4, 0, parent_hash4))
                 .build()
         )
     );

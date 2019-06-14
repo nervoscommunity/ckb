@@ -54,12 +54,8 @@ impl TransactionMeta {
         self.dead_cell.len()
     }
 
-    pub fn block_number(&self) -> u64 {
-        self.block_info.number
-    }
-
-    pub fn epoch_number(&self) -> u64 {
-        self.block_info.epoch
+    pub fn block_info(&self) -> &BlockInfo {
+        &self.block_info
     }
 
     pub fn is_empty(&self) -> bool {
@@ -91,10 +87,11 @@ impl TransactionMeta {
 mod tests {
     use super::*;
     use bincode;
+    use numext_fixed_hash::H256;
 
     #[test]
     fn transaction_meta_serde() {
-        let mut original = TransactionMeta::new(BlockInfo::new(0, 0), 4, false);
+        let mut original = TransactionMeta::new(BlockInfo::new(0, 0, H256::zero()), 4, false);
         original.set_dead(1);
         original.set_dead(3);
 
@@ -110,7 +107,7 @@ mod tests {
 
     #[test]
     fn set_unset_dead_out_of_bounds() {
-        let mut meta = TransactionMeta::new(BlockInfo::new(0, 0), 4, false);
+        let mut meta = TransactionMeta::new(BlockInfo::new(0, 0, H256::zero()), 4, false);
         meta.set_dead(3);
         assert!(meta.is_dead(3) == Some(true));
         meta.unset_dead(3);

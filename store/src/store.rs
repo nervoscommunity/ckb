@@ -285,7 +285,11 @@ impl<T: KeyValueDB> ChainStore for ChainKVStore<T> {
 
         for tx in genesis.transactions() {
             let tx_meta;
-            let block_info = BlockInfo::new(genesis.header().number(), genesis.header().epoch());
+            let block_info = BlockInfo::new(
+                genesis.header().number(),
+                genesis.header().epoch(),
+                genesis.header().parent_hash().clone(),
+            );
             let ins = if tx.is_cellbase() {
                 tx_meta = TransactionMeta::new_cellbase(block_info, tx.outputs().len(), false);
                 Vec::new()
@@ -543,6 +547,7 @@ impl<B: DbBatch> StoreBatch for DefaultStoreBatch<B> {
                     block_info: Some(BlockInfo::new(
                         block.header().number(),
                         block.header().epoch(),
+                        block.header().parent_hash().clone(),
                     )),
                     cellbase,
                     capacity: output.capacity,

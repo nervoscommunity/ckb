@@ -86,7 +86,7 @@ pub fn test_cellbase_maturity() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(30, 0))
+            .block_info(BlockInfo::new(30, 0, H256::zero()))
             .cellbase(true)
             .build(),
         )],
@@ -220,7 +220,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0))
+            .block_info(BlockInfo::new(1, 0, H256::zero()))
             .build(),
         )],
     };
@@ -252,7 +252,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0))
+            .block_info(BlockInfo::new(1, 0, H256::zero()))
             .build(),
         )],
     };
@@ -284,7 +284,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0))
+            .block_info(BlockInfo::new(1, 0, H256::zero()))
             .build(),
         )],
     };
@@ -317,7 +317,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0))
+            .block_info(BlockInfo::new(1, 0, H256::zero()))
             .build(),
         )],
     };
@@ -352,7 +352,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 1))
+            .block_info(BlockInfo::new(1, 1, H256::zero()))
             .build(),
         )],
     };
@@ -380,7 +380,7 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 1))
+            .block_info(BlockInfo::new(1, 1, H256::zero()))
             .build(),
         )],
     };

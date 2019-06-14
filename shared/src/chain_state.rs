@@ -6,8 +6,8 @@ use crate::tx_proposal_table::TxProposalTable;
 use ckb_chain_spec::consensus::{Consensus, ProposalWindow};
 use ckb_core::block::Block;
 use ckb_core::cell::{
-    resolve_transaction, BlockInfo, CellMetaBuilder, CellProvider, CellStatus, HeaderProvider,
-    HeaderStatus, OverlayCellProvider, ResolvedTransaction, UnresolvableError,
+    resolve_transaction, CellMetaBuilder, CellProvider, CellStatus, HeaderProvider, HeaderStatus,
+    OverlayCellProvider, ResolvedTransaction, UnresolvableError,
 };
 use ckb_core::extras::EpochExt;
 use ckb_core::header::{BlockNumber, Header};
@@ -265,6 +265,7 @@ impl<CS: ChainStore> ChainState<CS> {
                             &cell,
                             block.header().number(),
                             block.header().epoch(),
+                            block.header().parent_hash().clone(),
                             cellbase,
                             tx.outputs().len(),
                         );
@@ -281,14 +282,10 @@ impl<CS: ChainStore> ChainState<CS> {
 
         let inserted_new_outputs = new_outputs
             .into_iter()
-            .map(|(tx_hash, (number, epoch, cellbase, len))| {
-                let tx_meta = self.cell_set.insert_transaction(
-                    tx_hash.to_owned(),
-                    number,
-                    epoch,
-                    cellbase,
-                    len,
-                );
+            .map(|(tx_hash, (block_info, cellbase, len))| {
+                let tx_meta =
+                    self.cell_set
+                        .insert_transaction(tx_hash.to_owned(), block_info, cellbase, len);
                 (tx_hash, tx_meta)
             })
             .collect::<Vec<_>>();
@@ -786,10 +783,7 @@ impl<'a, CS: ChainStore> CellProvider for ChainCellSetOverlay<'a, CS> {
                                 let output = &outputs[cell_out_point.index as usize];
                                 CellMetaBuilder::from_cell_output(output.to_owned())
                                     .out_point(cell_out_point.to_owned())
-                                    .block_info(BlockInfo::new(
-                                        tx_meta.block_number(),
-                                        tx_meta.epoch_number(),
-                                    ))
+                                    .block_info(tx_meta.block_info().clone())
                                     .cellbase(tx_meta.is_cellbase())
                                     .build()
                             })
