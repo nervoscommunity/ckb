@@ -1,5 +1,5 @@
 use ckb_core::cell::BlockInfo;
-use ckb_core::{transaction::Transaction, BlockNumber, Cycle};
+use ckb_core::{transaction::Transaction, Cycle};
 use ckb_shared::shared::Shared;
 use ckb_shared::tx_pool::PoolError;
 use ckb_store::ChainStore;
@@ -26,10 +26,6 @@ impl<CS: ChainStore> BlockMedianTimeContext for StoreBlockMedianTimeContext<CS> 
             .get_block_header(block_hash)
             .expect("[StoreBlockMedianTimeContext] blocks used for median time exist");
         (header.timestamp(), header.parent_hash().to_owned())
-    }
-
-    fn get_block_hash(&self, block_number: BlockNumber) -> Option<H256> {
-        self.store.get_block_hash(block_number)
     }
 }
 

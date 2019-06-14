@@ -8,7 +8,7 @@ use ckb_core::header::Header;
 use ckb_core::transaction::Transaction;
 use ckb_core::uncle::UncleBlock;
 use ckb_core::Cycle;
-use ckb_core::{block::Block, BlockNumber, Capacity};
+use ckb_core::{block::Block, Capacity};
 use ckb_logger::error_target;
 use ckb_store::{data_loader_wrapper::DataLoaderWrapper, ChainStore};
 use ckb_traits::{BlockMedianTimeContext, ChainProvider};
@@ -46,14 +46,6 @@ impl<'a, P: ChainProvider> BlockMedianTimeContext for ForkContext<'a, P> {
             .get_block_header(block_hash)
             .expect("[ForkContext] blocks used for median time exist");
         (header.timestamp(), header.parent_hash().to_owned())
-    }
-
-    fn get_block_hash(&self, block_number: BlockNumber) -> Option<H256> {
-        self.attached_blocks
-            .iter()
-            .find(|b| b.header().number() == block_number)
-            .and_then(|b| Some(b.header().hash().to_owned()))
-            .or_else(|| self.provider.store().get_block_hash(block_number))
     }
 }
 

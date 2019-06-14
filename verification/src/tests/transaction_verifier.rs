@@ -180,29 +180,31 @@ impl BlockMedianTimeContext for FakeMedianTime {
 
     fn timestamp_and_parent(&self, block_hash: &H256) -> (u64, H256) {
         for i in 0..self.timestamps.len() {
-            if &self.get_block_hash(i as u64).unwrap() == block_hash {
+            if &self.get_block_hash(i as u64) == block_hash {
                 if i == 0 {
                     return (self.timestamps[i], H256::zero());
                 } else {
-                    return (
-                        self.timestamps[i],
-                        self.get_block_hash(i as u64 - 1).unwrap(),
-                    );
+                    return (self.timestamps[i], self.get_block_hash(i as u64 - 1));
                 }
             }
         }
         unreachable!()
     }
+}
 
-    fn get_block_hash(&self, block_number: BlockNumber) -> Option<H256> {
+impl FakeMedianTime {
+    pub fn get_block_hash(&self, block_number: BlockNumber) -> H256 {
         let vec: Vec<u8> = (0..32).map(|_| block_number as u8).collect();
-        Some(H256::from_slice(vec.as_slice()).unwrap())
+        H256::from_slice(vec.as_slice()).unwrap()
     }
 }
 
 #[test]
 pub fn test_since() {
     // use remain flags
+    let median_time_context = FakeMedianTime {
+        timestamps: vec![0; 11],
+    };
     let transaction = TransactionBuilder::default()
         .inputs(vec![CellInput::new(
             OutPoint::new_cell(h256!("0x1"), 0),
@@ -220,15 +222,12 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0, H256::zero()))
+            .block_info(BlockInfo::new(1, 0, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let median_time_context = FakeMedianTime {
-        timestamps: vec![0; 11],
-    };
-    let block_info = BlockInfo::new(5, 1, H256::zero());
+    let block_info = BlockInfo::new(5, 1, median_time_context.get_block_hash(4));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(
         verifier.verify().err(),
@@ -242,7 +241,9 @@ pub fn test_since() {
             0x0000_0000_0000_000a,
         )])
         .build();
-
+    let median_time_context = FakeMedianTime {
+        timestamps: vec![0; 11],
+    };
     let rtx = ResolvedTransaction {
         transaction: &transaction,
         resolved_deps: Vec::new(),
@@ -253,19 +254,16 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0, H256::zero()))
+            .block_info(BlockInfo::new(1, 0, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let median_time_context = FakeMedianTime {
-        timestamps: vec![0; 11],
-    };
-    let block_info = BlockInfo::new(5, 1, H256::zero());
+    let block_info = BlockInfo::new(5, 1, median_time_context.get_block_hash(4));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 10 height
-    let block_info = BlockInfo::new(10, 1, H256::zero());
+    let block_info = BlockInfo::new(10, 1, median_time_context.get_block_hash(9));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
@@ -287,12 +285,12 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0, H256::zero()))
+            .block_info(BlockInfo::new(1, 0, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let block_info = BlockInfo::new(4, 1, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 1024 seconds
@@ -300,7 +298,7 @@ pub fn test_since() {
     let median_time_context = FakeMedianTime {
         timestamps: vec![0, 100_000, 1_124_000, 2_000_000, 3_000_000],
     };
-    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let block_info = BlockInfo::new(4, 1, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
@@ -322,12 +320,12 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 0, H256::zero()))
+            .block_info(BlockInfo::new(1, 0, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let block_info = BlockInfo::new(4, 1, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
     // spent after 1024 seconds and 10 blocks
@@ -338,7 +336,7 @@ pub fn test_since() {
             6_000_000,
         ],
     };
-    let block_info = BlockInfo::new(10, 1, H256::zero());
+    let block_info = BlockInfo::new(10, 1, median_time_context.get_block_hash(9));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
     // next epoch
@@ -359,15 +357,15 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 1, H256::zero()))
+            .block_info(BlockInfo::new(1, 1, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let block_info = BlockInfo::new(4, 1, H256::zero());
+    let block_info = BlockInfo::new(4, 1, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(verifier.verify().err(), Some(TransactionError::Immature));
-    let block_info = BlockInfo::new(4, 2, H256::zero());
+    let block_info = BlockInfo::new(4, 2, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert!(verifier.verify().is_ok());
 
@@ -389,12 +387,12 @@ pub fn test_since() {
                 Script::default(),
                 None,
             ))
-            .block_info(BlockInfo::new(1, 1, H256::zero()))
+            .block_info(BlockInfo::new(1, 1, median_time_context.get_block_hash(0)))
             .build(),
         )],
     };
 
-    let block_info = BlockInfo::new(4, 2, H256::zero());
+    let block_info = BlockInfo::new(4, 2, median_time_context.get_block_hash(3));
     let verifier = SinceVerifier::new(&rtx, &median_time_context, &block_info);
     assert_eq!(
         verifier.verify().err(),

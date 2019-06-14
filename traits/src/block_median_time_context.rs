@@ -34,12 +34,4 @@ pub trait BlockMedianTimeContext {
         timestamps.sort();
         timestamps[timestamps.len() / 2]
     }
-
-    /// Return the corresponding block_hash
-    ///
-    /// It's just a convenience way that constructing a BlockMedianContext, to get the
-    /// corresponding block_hash when you only know a block_number.
-    ///
-    /// Often used in verifying "since by block number".
-    fn get_block_hash(&self, block_number: BlockNumber) -> Option<H256>;
 }
