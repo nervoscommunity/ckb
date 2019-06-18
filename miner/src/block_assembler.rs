@@ -317,8 +317,11 @@ impl<CS: ChainStore + 'static> BlockAssembler<CS> {
             .collect();
 
         let cellbase_lock = Script::new(cellbase_lock_args, self.config.code_hash.clone());
+
+        let cellbase_data =  self.config.data.clone();
+
         let (dummy_cellbase, cellbase_size, cellbase_cycle) =
-            self.dummy_cellbase_transaction(&tip_header, cellbase_lock, None)?;
+            self.dummy_cellbase_transaction(&tip_header, cellbase_data, cellbase_lock, None)?;
 
         let last_txs_updated_at = chain_state.get_last_txs_updated_at();
         let proposals = chain_state.get_proposals(proposals_limit as usize);
@@ -381,6 +384,7 @@ impl<CS: ChainStore + 'static> BlockAssembler<CS> {
     fn dummy_cellbase_transaction(
         &self,
         tip: &Header,
+        data: Bytes,
         lock: Script,
         type_: Option<Script>,
     ) -> Result<(Transaction, usize, Cycle), FailureError> {
@@ -391,7 +395,7 @@ impl<CS: ChainStore + 'static> BlockAssembler<CS> {
         // stick to the simpler way and just convert everything to a single string, then to UTF8
         // bytes, they really serve the same purpose at the moment
 
-        let output = CellOutput::new(Capacity::zero(), Bytes::new(), lock, type_);
+        let output = CellOutput::new(Capacity::zero(), data, lock, type_);
 
         let tx = TransactionBuilder::default()
             .input(input)

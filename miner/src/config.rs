@@ -1,6 +1,7 @@
 use crate::worker::{CuckooSimpleConfig, DummyConfig};
 use jsonrpc_types::JsonBytes;
 use numext_fixed_hash::H256;
+use ckb_core::{Bytes};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -27,4 +28,6 @@ pub enum WorkerConfig {
 pub struct BlockAssemblerConfig {
     pub code_hash: H256,
     pub args: Vec<JsonBytes>,
+    #[serde(default)]
+    pub data: Bytes,
 }
